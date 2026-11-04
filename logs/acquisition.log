@@ -1,0 +1,32 @@
+2026-11-04 10:30:27,524 | INFO | Starting RTSP Acquisition Service
+2026-11-04 10:30:27,525 | INFO | Connecting to RTSP stream
+2026-11-04 10:30:27,529 | INFO | Starting FFmpeg recorder
+2026-11-04 10:30:32,104 | INFO | RTSP connection established
+2026-11-04 10:35:32,109 | INFO | Frames=9021 | FPS=30.07 | Resolution=1280x720
+2026-11-04 10:40:32,135 | INFO | Frames=18022 | FPS=30.00 | Resolution=1280x720
+2026-11-04 10:45:32,138 | INFO | Frames=27022 | FPS=30.00 | Resolution=1280x720
+2026-11-04 10:50:32,168 | INFO | Frames=36023 | FPS=30.00 | Resolution=1280x720
+2026-11-04 10:55:32,201 | INFO | Frames=45024 | FPS=30.00 | Resolution=1280x720
+2026-11-04 11:00:32,202 | INFO | Frames=54024 | FPS=30.00 | Resolution=1280x720
+2026-11-04 11:05:32,233 | INFO | Frames=63025 | FPS=30.00 | Resolution=1280x720
+2026-11-04 11:10:32,234 | INFO | Frames=72025 | FPS=30.00 | Resolution=1280x720
+2026-11-04 11:15:32,265 | INFO | Frames=81026 | FPS=30.00 | Resolution=1280x720
+2026-11-04 11:18:06,930 | WARNING | Frame acquisition failed
+2026-11-04 11:18:06,934 | INFO | Reconnecting in 5 seconds
+2026-11-04 11:18:07,458 | WARNING | FFmpeg stopped. Exit code: 0
+2026-11-04 11:18:07,459 | INFO | Restarting recorder in 5 seconds
+2026-11-04 11:18:11,936 | INFO | Connecting to RTSP stream
+2026-11-04 11:18:11,945 | ERROR | RTSP connection failed
+2026-11-04 11:18:12,460 | INFO | Starting FFmpeg recorder
+2026-11-04 11:18:13,461 | WARNING | FFmpeg stopped. Exit code: 8
+2026-11-04 11:18:13,461 | INFO | Restarting recorder in 5 seconds
+2026-11-04 11:18:16,946 | INFO | Connecting to RTSP stream
+2026-11-04 11:18:16,953 | ERROR | RTSP connection failed
+2026-11-04 11:18:18,462 | INFO | Starting FFmpeg recorder
+2026-11-04 11:18:19,465 | WARNING | FFmpeg stopped. Exit code: 8
+2026-11-04 11:18:19,466 | INFO | Restarting recorder in 5 seconds
+2026-11-04 11:18:21,954 | INFO | Connecting to RTSP stream
+2026-11-04 11:18:21,959 | ERROR | RTSP connection failed
+2026-11-04 11:18:22,932 | INFO | Shutdown requested
+2026-11-04 11:18:22,933 | INFO | Recording supervisor stopped
+2026-11-04 11:18:22,933 | INFO | Acquisition service stopped
