@@ -1,0 +1,204 @@
+Terminal 1 : MediaMTX
+sudo docker start mediamtx
+
+Terminal 2 : Traffic video publisher
+ffmpeg -re \
+  -stream_loop -1 \
+  -i /home/anyaccess/dmwamba2-t1/dx/RTSP_TEST/Test_RTSPLink_v1/videos/traffic.mp4 \
+  -c:v libx264 \
+  -preset ultrafast \
+  -tune zerolatency \
+  -pix_fmt yuv420p \
+  -an -f rtsp \
+  -rtsp_transport tcp \
+  rtsp://127.0.0.1:8554/traffic
+
+Terminal 3: Acquisition application
+python main.py
+
+VALIDATION The MP4 file
+ffprobe -v error \
+  -show_entries format=duration,size,format_name \
+  -show_entries stream=codec_name,width,height \
+  -of default=noprint_wrappers=1 \
+  /home/anyaccess/dmwamba2-t1/dx/RTSP_TEST/Test_RTSPLink_v1/recordings/2026/11/04/traffic_103032.mp4
+
+
+UPDATE
+1. Update config/camera_config.py
+Add:
+
+from datetime import time
+
+RECORDING_WINDOWS = [
+    (time(7, 0), time(8, 0)),
+    (time(16, 0), time(17, 0)),
+]
+
+Keep:
+SEGMENT_DURATION = 300
+RECONNECT_DELAY = 5
+
+2. Replace acquisition/recorder.py
+Use the following implementation:
+
+import subprocess
+import time
+import logging
+
+from datetime import datetime, timedelta
+
+from config.camera_config import (
+    RTSP_URL,
+    RECORDINGS_DIR,
+    SEGMENT_DURATION,
+    RECONNECT_DELAY,
+    RECORDING_WINDOWS,
+)
+
+
+def get_active_window(now):
+    """Return the active recording window, if any."""
+
+    current_time = now.time()
+
+    for start, end in RECORDING_WINDOWS:
+        if start <= current_time < end:
+            return start, end
+
+    return None
+
+
+def seconds_until_next_window(now):
+    """Calculate seconds until the next recording window."""
+
+    candidates = []
+
+    for start, end in RECORDING_WINDOWS:
+        candidate = datetime.combine(now.date(), start)
+
+        if candidate <= now:
+            continue
+
+        candidates.append(candidate)
+
+    if not candidates:
+        tomorrow = now.date() + timedelta(days=1)
+
+        candidates = [
+            datetime.combine(tomorrow, start)
+            for start, end in RECORDING_WINDOWS
+        ]
+
+    next_start = min(candidates)
+
+    return max(1, int((next_start - now).total_seconds()))
+
+
+def recording_supervisor(stop_event):
+
+    while not stop_event.is_set():
+
+        now = datetime.now()
+        active_window = get_active_window(now)
+
+        # Outside recording hours
+        if active_window is None:
+
+            wait_seconds = seconds_until_next_window(now)
+
+            logging.info(
+                "Outside recording hours. "
+                "Next recording starts in %.0f seconds",
+                wait_seconds
+            )
+
+            stop_event.wait(wait_seconds)
+            continue
+
+        window_start, window_end = active_window
+
+        end_time = datetime.combine(now.date(), window_end)
+
+        remaining_seconds = max(
+            1,
+            int((end_time - now).total_seconds())
+        )
+
+        # Date-based output folder
+        output_dir = (
+            RECORDINGS_DIR
+            / now.strftime("%Y")
+            / now.strftime("%m")
+            / now.strftime("%d")
+        )
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        output_pattern = str(
+            output_dir / "traffic_%H%M%S.mp4"
+        )
+
+        command = [
+            "ffmpeg",
+            "-nostdin",
+            "-hide_banner",
+            "-loglevel", "warning",
+            "-rtsp_transport", "tcp",
+            "-i", RTSP_URL,
+            "-map", "0:v:0",
+            "-c:v", "copy",
+            "-an",
+            "-t", str(remaining_seconds),
+            "-f", "segment",
+            "-segment_time", str(SEGMENT_DURATION),
+            "-reset_timestamps", "1",
+            "-strftime", "1",
+            output_pattern,
+        ]
+
+        process = None
+
+        try:
+            logging.info(
+                "Recording started: %s - %s",
+                window_start,
+                window_end
+            )
+
+            process = subprocess.Popen(command)
+
+            while process.poll() is None:
+
+                if stop_event.wait(1):
+                    process.terminate()
+                    break
+
+                # Stop precisely at the end of the window
+                if datetime.now() >= end_time:
+                    logging.info("Recording window ended")
+                    process.terminate()
+                    break
+
+            if process.poll() is None:
+                try:
+                    process.wait(timeout=15)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+
+            if not stop_event.is_set():
+                logging.info("Recording process stopped")
+
+        except Exception:
+            logging.exception("Recording service error")
+
+        finally:
+            if process and process.poll() is None:
+                process.terminate()
+                process.wait()
+
+        if not stop_event.is_set():
+            stop_event.wait(RECONNECT_DELAY)
+
+    logging.info("Recording supervisor stopped")
